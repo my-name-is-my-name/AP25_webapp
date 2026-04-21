@@ -1,0 +1,9 @@
+pypdf
+pysqlite3-binary; platform_system != "Windows"
+torch
+transformers
+sentence-transformers
+huggingface-hub
+langchain-community
+langchain-huggingface
+chromadb
