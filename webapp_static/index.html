@@ -1,1 +1,446 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AP-25 RAG</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --line: #d8dfeb;
+        --text: #162033;
+        --muted: #5f6c84;
+        --accent: #0b6bcb;
+        --accent-soft: #e7f1fb;
+        --user: #eef5ff;
+        --assistant: #ffffff;
+        --danger: #b42318;
+        --shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+      }
 
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Inter", sans-serif;
+        background: linear-gradient(180deg, #eef4fb 0%, #f7f9fc 100%);
+        color: var(--text);
+      }
+
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar {
+        padding: 20px;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      .sidebar h1 {
+        margin: 0 0 8px;
+        font-size: 24px;
+      }
+
+      .muted {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .status {
+        margin-top: 18px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        font-size: 14px;
+      }
+
+      .field {
+        margin-top: 18px;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      select, button, textarea {
+        font: inherit;
+      }
+
+      select, textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: white;
+        color: var(--text);
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+
+      button {
+        border: none;
+        border-radius: 14px;
+        padding: 11px 14px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: #edf2f7;
+        color: var(--text);
+      }
+
+      button.danger {
+        background: #fee4e2;
+        color: var(--danger);
+      }
+
+      .chat {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: calc(100vh - 48px);
+      }
+
+      .chat-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .chat-header h2 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+
+      .messages {
+        padding: 22px;
+        overflow: auto;
+      }
+
+      .message {
+        max-width: 850px;
+        padding: 18px;
+        border-radius: 18px;
+        margin-bottom: 16px;
+        border: 1px solid var(--line);
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+
+      .message.user {
+        margin-left: auto;
+        background: var(--user);
+      }
+
+      .message.assistant {
+        background: var(--assistant);
+      }
+
+      .meta {
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .hits {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .hit {
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+      }
+
+      .composer {
+        padding: 20px 22px 24px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.96);
+        position: sticky;
+        bottom: 0;
+      }
+
+      .composer-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      textarea {
+        min-height: 88px;
+        resize: vertical;
+      }
+
+      .hint {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 900px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+
+        .chat {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="panel sidebar">
+        <h1>AP-25 RAG</h1>
+        <div class="muted">
+          Небольшой браузерный интерфейс для работы с АП-25 по сети.
+          Можно открыть с любого компьютера, который видит сервер.
+        </div>
+
+        <div class="status" id="serverStatus">Загрузка статуса...</div>
+
+        <div class="field">
+          <label for="modelSelect">Модель</label>
+          <select id="modelSelect"></select>
+          <div class="button-row">
+            <button id="loadModelButton" type="button">Подключить модель</button>
+            <button id="downloadModelButton" class="secondary" type="button">Скачать и подключить</button>
+            <button id="unloadModelButton" class="danger" type="button">Выгрузить</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="modeSelect">Режим</label>
+          <select id="modeSelect">
+            <option value="">auto</option>
+            <option value="normative_lookup">normative_lookup</option>
+            <option value="issue_spotting">issue_spotting</option>
+          </select>
+        </div>
+      </aside>
+
+      <main class="panel chat">
+        <div class="chat-header">
+          <h2>Чат по АП-25</h2>
+          <div class="muted">
+            Интерфейс нарочно простой: один запрос, один ответ, краткие retrieval-фрагменты ниже.
+          </div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="composer">
+          <div class="composer-row">
+            <textarea id="queryInput" placeholder="Введите вопрос по АП-25..."></textarea>
+            <button id="sendButton" type="button">Отправить</button>
+          </div>
+          <div class="hint">
+            Enter отправляет запрос, Shift+Enter добавляет новую строку.
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const messagesEl = document.getElementById("messages");
+      const queryInput = document.getElementById("queryInput");
+      const sendButton = document.getElementById("sendButton");
+      const modelSelect = document.getElementById("modelSelect");
+      const modeSelect = document.getElementById("modeSelect");
+      const serverStatus = document.getElementById("serverStatus");
+      const loadModelButton = document.getElementById("loadModelButton");
+      const downloadModelButton = document.getElementById("downloadModelButton");
+      const unloadModelButton = document.getElementById("unloadModelButton");
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function addMessage(role, text, meta = null, hits = []) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `message ${role}`;
+
+        const body = document.createElement("div");
+        body.innerHTML = escapeHtml(text);
+        wrapper.appendChild(body);
+
+        if (meta) {
+          const metaEl = document.createElement("div");
+          metaEl.className = "meta";
+          metaEl.textContent = meta;
+          wrapper.appendChild(metaEl);
+        }
+
+        if (hits.length) {
+          const hitsEl = document.createElement("div");
+          hitsEl.className = "hits";
+          for (const hit of hits) {
+            const hitEl = document.createElement("div");
+            hitEl.className = "hit";
+            hitEl.innerHTML =
+              `<strong>${escapeHtml(hit.paragraph_label || "")}</strong> ${escapeHtml(hit.paragraph_title || "")}<br>` +
+              `<span class="muted">${escapeHtml(hit.context || "")}</span><br>` +
+              `${escapeHtml(hit.text_preview || "")}`;
+            hitsEl.appendChild(hitEl);
+          }
+          wrapper.appendChild(hitsEl);
+        }
+
+        messagesEl.appendChild(wrapper);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      async function loadStatus() {
+        const response = await fetch("/api/status");
+        const payload = await response.json();
+        const status = payload.status;
+        serverStatus.innerHTML =
+          `Устройство: ${escapeHtml(status.device)}<br>` +
+          `Текущая модель: ${escapeHtml(status.current_model || "не загружена")}<br>` +
+          `Retrieval: ${status.retrieval_ready ? "готов" : "еще не инициализирован"}`;
+
+        modelSelect.innerHTML = "";
+        for (const model of status.models) {
+          const option = document.createElement("option");
+          option.value = model.key;
+          const stateLabel = model.local_exists
+            ? ""
+            : (model.allow_download ? " (не скачана)" : " (нужен локальный путь)");
+          option.textContent = `${model.display_name}${stateLabel}`;
+          if (model.loaded) option.selected = true;
+          modelSelect.appendChild(option);
+        }
+      }
+
+      async function switchModel(downloadIfMissing) {
+        const modelKey = modelSelect.value;
+        const modelInfo = Array.from((await (await fetch("/api/status")).json()).status.models).find((item) => item.key === modelKey);
+        if (downloadIfMissing && modelInfo && !modelInfo.allow_download) {
+          addMessage(
+            "assistant",
+            `Для ${modelInfo.display_name} автоскачивание отключено.\n` +
+            `Нужно заранее положить модель локально и, если нужно, указать путь через ${modelInfo.env_var || "переменную окружения"}.`
+          );
+          return;
+        }
+        const response = await fetch("/api/models/load", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model_key: modelKey,
+            download_if_missing: downloadIfMissing
+          })
+        });
+        const payload = await response.json();
+        if (!payload.ok) {
+          addMessage("assistant", `Ошибка загрузки модели:\n${payload.error}`);
+          return;
+        }
+        await loadStatus();
+        addMessage("assistant", `Активная модель: ${payload.result.display_name}`);
+      }
+
+      async function unloadModel() {
+        const response = await fetch("/api/models/unload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
+        const payload = await response.json();
+        if (!payload.ok) {
+          addMessage("assistant", `Ошибка выгрузки модели:\n${payload.error}`);
+          return;
+        }
+        await loadStatus();
+        addMessage("assistant", "Модель выгружена.");
+      }
+
+      async function sendQuery() {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        addMessage("user", query);
+        queryInput.value = "";
+        sendButton.disabled = true;
+        sendButton.textContent = "Ждем...";
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query,
+              query_mode: modeSelect.value || null,
+              model_key: modelSelect.value || null
+            })
+          });
+          const payload = await response.json();
+          if (!payload.ok) {
+            addMessage("assistant", `Ошибка:\n${payload.error}`);
+            return;
+          }
+
+          const result = payload.result;
+          const meta = `mode=${result.query_mode}, confidence=${result.confidence_label}, model=${result.model || "неизвестно"}`;
+          addMessage("assistant", result.answer, meta, result.hits || []);
+          await loadStatus();
+        } catch (error) {
+          addMessage("assistant", `Ошибка сети:\n${String(error)}`);
+        } finally {
+          sendButton.disabled = false;
+          sendButton.textContent = "Отправить";
+        }
+      }
+
+      sendButton.addEventListener("click", sendQuery);
+      queryInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          sendQuery();
+        }
+      });
+      loadModelButton.addEventListener("click", () => switchModel(false));
+      downloadModelButton.addEventListener("click", () => switchModel(true));
+      unloadModelButton.addEventListener("click", unloadModel);
+
+      loadStatus();
+      addMessage("assistant", "Интерфейс готов. Можно задавать вопросы по АП-25 и переключать модели для тестов.");
+    </script>
+  </body>
+</html>
