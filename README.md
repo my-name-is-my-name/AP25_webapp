@@ -94,6 +94,9 @@ RAG-система для работы с АП-25: точечных нормат
 
 Основные файлы:
 
+- [requirements.txt](/Users/andreyhizhenkov/rag/requirements.txt)  
+  Минимальный набор Python-зависимостей для запуска сервера и базового retrieval.
+
 - [ap25_parser.py](/Users/andreyhizhenkov/rag/ap25_parser.py)  
   Парсер АП-25 и построение структурных chunk-ов.
 
@@ -133,6 +136,12 @@ RAG-система для работы с АП-25: точечных нормат
 
 ```bash
 python3 -m unittest -q tests/test_regressions.py
+```
+
+Установка зависимостей:
+
+```bash
+python3 -m pip install -r requirements.txt
 ```
 
 ## Браузерное приложение
